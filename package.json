@@ -1,0 +1,16 @@
+{
+  "name": "azaroth-corporate-cms",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=22.13.0"},
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node tests/integration.mjs",
+    "backup": "node scripts/backup.mjs",
+    "reset-password": "node scripts/reset-password.mjs",
+    "test:frontend": "node tests/frontend-smoke.mjs",
+    "check": "node --check server.js && node --check public/app.js && node --check public/enhancements.js && node --check public/icons.js"
+  }
+}
