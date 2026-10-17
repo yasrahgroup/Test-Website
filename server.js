@@ -93,7 +93,7 @@ const imgOK=x=>x===''||x==='/logo.png'||(/^\/media\/[a-f0-9]{32}\.(png|jpg|webp)
 function cookies(req){const out={};for(const segment of (req.headers.cookie||'').split(';')){const pos=segment.indexOf('=');if(pos>0)out[segment.slice(0,pos).trim()]=segment.slice(pos+1).trim();}return out;}
 function member(req){const token=cookies(req).sid;if(!token||!/^[a-f0-9]{64}$/.test(token))return null;return db.prepare('SELECT u.id,u.email,u.role,s.csrf,s.expires FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND u.active=1').get(sha(token))||null;}
 function allowed(req,member,role='viewer'){return !!member&&member.expires>Date.now()&&ROLES[member.role]>=ROLES[role];}
-function sameSite(req){const origin=req.headers.origin;if(origin){try{const u=new URL(origin);if(u.host!==req.headers.host)return false;return u.protocol==='http:'||u.protocol==='https:';}catch{return false;}}const sec=req.headers['sec-fetch-site'];return !sec||sec==='same-origin'||sec==='none';}
+function sameSite(req){const origin=req.headers.origin;if(origin){try{const u=new URL(origin);if(u.host!==req.headers.host)return false;return u.protocol==='http:'||u.protocol==='https:';}catch{return false;}}const sec=req.headers['sec-fetch-site'];return !sec||sec==='same-origin'||sec==='none'||sec==='cross-site';}
 function authWrite(req,member){return sameSite(req)&&req.headers['x-csrf-token']===member.csrf;}
 const hits=new Map();function limited(req,key,max,period=60000){const ip=(req.socket.remoteAddress||'unknown').slice(0,120),id=key+':'+ip,now=Date.now(),prev=hits.get(id)||[],fresh=prev.filter(t=>t>now-period);fresh.push(now);hits.set(id,fresh);if(hits.size>15000){for(const [k,v] of hits){if(!v.length||v[v.length-1]<now-period)hits.delete(k);}}return fresh.length>max;}
 async function jsonBody(req,limit=140000){const chunks=[];let n=0;for await(const part of req){n+=part.length;if(n>limit)throw Object.assign(Error('Payload too large'),{httpCode:413});chunks.push(part);}try{return JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}');}catch{throw Object.assign(Error('Invalid JSON'),{httpCode:400});}}
@@ -114,8 +114,8 @@ function webHtml(p){const site=settings(),seo=contentSEO(p,site),canonical=siteU
 }
 function streamFile(res,file,mime,extra={}){res.writeHead(200,{'Content-Type':mime,'X-Content-Type-Options':'nosniff',...extra});return fs.createReadStream(file).pipe(res);}
 const server=http.createServer(async(req,res)=>{
- res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=(), payment=()');
- res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'");
+ res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=(), payment=()');
+ res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'");
  if(prod)res.setHeader('Strict-Transport-Security','max-age=31536000; includeSubDomains');
  try{
  const url=new URL(req.url,'http://localhost');const p=url.pathname;const method=req.method;const user=member(req);
